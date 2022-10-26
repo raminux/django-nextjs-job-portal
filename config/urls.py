@@ -21,3 +21,8 @@ urlpatterns = [
     path('api/', include('jobs.urls')), 
     path('api/', include('accounts.urls')),
 ]
+
+handler500 = 'utils.error_views.handler500'
+handler404 = 'utils.error_views.handler404'
+
+
