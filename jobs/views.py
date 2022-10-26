@@ -1,7 +1,8 @@
 from django.shortcuts import render, get_object_or_404
 from django.db.models import Avg, Min, Max, Count
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from jobs import models
@@ -43,7 +44,9 @@ def get_job_by_id(request, pk):
 
 
 @api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_new_job(request):
+    request.data['user'] = request.user
     data = request.data
 
     job = models.Job.objects.create(**data)
@@ -52,9 +55,13 @@ def add_new_job(request):
 
 
 @api_view(['PUT'])
+@permission_classes([IsAuthenticated])
 def update_job(request, pk):
-    job = get_object_or_404(models.Job, id=pk)
     
+    job = get_object_or_404(models.Job, id=pk)
+    if job.user != request.user:
+        return Response({'message': 'You can not update this job'}, status=status.HTTP_403_FORBIDDEN)
+        
     job.title = request.data['title']
     job.description = request.data['description'] 
     job.email = request.data['email']
@@ -75,8 +82,11 @@ def update_job(request, pk):
 
 
 @api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def delete_job(request, pk):
     job = get_object_or_404(models.Job, id=pk)
+    if job.user != request.user:
+        return Response({'message': 'You can not update this job'}, status=status.HTTP_403_FORBIDDEN)
     job.delete()
     return Response({'message': 'Job is deleted!'}, status=status.HTTP_200_OK)
 
