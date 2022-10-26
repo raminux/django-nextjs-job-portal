@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from accounts.serializers import SignUpSerializer, UserSerializer
+from accounts.validators import validate_file_extension
 
 
 @api_view(['POST'])
@@ -52,6 +53,26 @@ def update_user(request):
     user.save() 
     serializer = UserSerializer(user, many=False)
     return Response(serializer.data)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def upload_resume(request):
+    user = request.user
+    resume = request.FILES['resume']
+    if resume == '':
+        return Response({'error': 'Please upload your resume.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    is_valid_file = validate_file_extension(resume.name)
+    if not is_valid_file:
+        return Response({'error': 'Please upload only pdf file.'}, status=status.HTTP_400_BAD_REQUEST)
+    user.userprofile.resume = resume
+    user.userprofile.save()
+
+    serializer = UserSerializer(user, many=False)
+    return Response(serializer.data)
+
+
 
     
 

@@ -7,6 +7,7 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view()), 
     path('token/verify/', TokenVerifyView.as_view()),
     path('me/', views.current_user, name='current_user'),
-    path('me/update/', views.update_user, name='update_user')
+    path('me/update/', views.update_user, name='update_user'), 
+    path('upload/resume/', views.upload_resume, name='upload_resume'),
 
 ]
