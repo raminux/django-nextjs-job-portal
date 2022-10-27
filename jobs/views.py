@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404
+from django.utils import timezone
 from django.db.models import Avg, Min, Max, Count
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -6,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from jobs import models
-from jobs.serializers import JobSerializer
+from jobs.serializers import JobSerializer, CandidateAppliedSerializer
 from jobs import filters
 
 
@@ -106,3 +107,75 @@ def get_topic_stats(request, topic):
         max_salary = Max('salary'),
     )
     return Response(stats)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def apply_to_job(request, pk):
+    user = request.user
+    job = get_object_or_404(models.Job, id=pk)
+    if user.userprofile.resume == '':
+        return Response({'error': 'Please upload your resume first'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    if job.last_apply_date < timezone.now():
+        return Response({'error': 'You can not apply to this job. Date is over!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Instead of using related_name argument when defining the CandidateApplied model, we can use 
+    # candidateapplied_set method to access the mentiond field from the job class. 
+    already_applied = job.candidateapplied_set.filter(user=user).exists()
+    if already_applied:
+        return Response({'error': 'You have already applied to this job.', }, status=status.HTTP_400_BAD_REQUEST)
+    
+    job_applied = models.CandidateApplied.objects.create(
+        job=job, 
+        user=user,
+        resume=user.userprofile.resume
+    )
+
+    return Response({'applied': True, 'job_id': job_applied.id}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user_applied_jobs(request):
+    args = {'user_id': request.user.id}
+
+    jobs = models.CandidateApplied.objects.filter(**args)
+    serializer = CandidateAppliedSerializer(jobs, many=True)
+
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def is_applied(request, pk):
+    user = request.user
+    job = get_object_or_404(models.Job, id=pk)
+
+    applied = job.candidateapplied_set.filter(user=user).exists()
+
+    return Response(applied)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user_posted_jobs(request):
+
+    args = {'user': request.user.id}
+    jobs = models.Job.objects.filter(**args)
+    serializer = JobSerializer(jobs, many=True)
+
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def candidates_applied(request, pk):
+    user = request.user
+    job = get_object_or_404(models.Job, id=pk)
+    if job.user != user:
+        return Response({'error': 'You can not see this job applicants!'}, status=status.HTTP_403_FORBIDDEN)
+    
+    candidates = job.candidateapplied_set.all()
+    serializer = CandidateAppliedSerializer(candidates, many=True)
+    return Response(serializer.data)

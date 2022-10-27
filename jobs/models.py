@@ -83,3 +83,8 @@ class Job(models.Model):
         super(Job, self).save(*args, **kwargs)
 
 
+class CandidateApplied(models.Model):
+    job = models.ForeignKey(Job, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    resume = models.CharField(max_length=200)
+    applied_at = models.DateTimeField(auto_now_add=True)
