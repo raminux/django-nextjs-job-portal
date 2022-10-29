@@ -11,3 +11,13 @@ Also it is required to install the following extension of postgres
 ```bash
 sudo apt install postgis    
 ```
+
+# How to setup the Nextjs project:
+```bash
+$ mkdir frontend
+$ cd frontend
+$ npx create-next-app .
+$ npm i axios cookie moment react-data-table-component react-js-pagination react-toastify --save
+$ npm run dev
+'''
+
